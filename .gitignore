@@ -1,0 +1,8 @@
+.idea/
+data/
+
+# 模型权重
+outputs/models_ckpt/
+
+__pycache__/
+*.pyc
