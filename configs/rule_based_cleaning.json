@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "config_version": "rule_based_cleaning_v1",
+  "interval_method": "pred_l_mondrian_std_mc",
+  "confidence": 0.9,
+  "loss_threshold": null,
+  "min_irradiance": null,
+  "max_interval_width": null
+}
