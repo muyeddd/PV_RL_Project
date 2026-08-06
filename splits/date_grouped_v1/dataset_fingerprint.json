@@ -1,0 +1,12 @@
+{
+  "earliest_timestamp": "2017-06-13T09:46:49",
+  "filename_hash_canonicalization": "UTF-8 filenames sorted lexicographically and joined by LF with no trailing LF",
+  "independent_date_count": 15,
+  "latest_timestamp": "2017-06-30T15:58:00",
+  "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+  "schema_version": 1,
+  "sorted_filenames_sha256": "721aed71449310717b3b6d76c69ae279eb0035579589f9c5d7e82d3ecebd61f0",
+  "split_config_sha256": "9f845ad3b00e5abc0baad20239c7e728d1375704f41bdbc8faca18f8b5d1a1f1",
+  "split_version": "date_grouped_v1",
+  "total_files": 45754
+}

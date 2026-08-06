@@ -1,0 +1,13 @@
+scope,name,top_level_role,cv_fold,subset,date_count,sample_count,dates
+top_level,model_development,model_development,,model_development,8,25716,2017-06-13|2017-06-14|2017-06-16|2017-06-20|2017-06-21|2017-06-26|2017-06-28|2017-06-29
+top_level,cp_calibration,cp_calibration,,cp_calibration,2,4887,2017-06-23|2017-06-25
+top_level,decision_development,decision_development,,decision_development,2,6296,2017-06-22|2017-06-27
+top_level,final_test,final_test,,final_test,3,8855,2017-06-15|2017-06-24|2017-06-30
+cv,fold_1_train,model_development,1,train,6,19805,2017-06-14|2017-06-16|2017-06-20|2017-06-21|2017-06-26|2017-06-29
+cv,fold_1_validation,model_development,1,validation,2,5911,2017-06-13|2017-06-28
+cv,fold_2_train,model_development,2,train,6,18524,2017-06-13|2017-06-16|2017-06-20|2017-06-21|2017-06-26|2017-06-28
+cv,fold_2_validation,model_development,2,validation,2,7192,2017-06-14|2017-06-29
+cv,fold_3_train,model_development,3,train,6,19216,2017-06-13|2017-06-14|2017-06-20|2017-06-21|2017-06-28|2017-06-29
+cv,fold_3_validation,model_development,3,validation,2,6500,2017-06-16|2017-06-26
+cv,fold_4_train,model_development,4,train,6,19603,2017-06-13|2017-06-14|2017-06-16|2017-06-26|2017-06-28|2017-06-29
+cv,fold_4_validation,model_development,4,validation,2,6113,2017-06-20|2017-06-21

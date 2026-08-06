@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "split_version": "date_grouped_v1",
+  "created_for": "Leakage-free date-grouped model development, conformal calibration, cleaning-decision development, and final evaluation.",
+  "top_level_splits": {
+    "model_development": [
+      "2017-06-13",
+      "2017-06-14",
+      "2017-06-16",
+      "2017-06-20",
+      "2017-06-21",
+      "2017-06-26",
+      "2017-06-28",
+      "2017-06-29"
+    ],
+    "cp_calibration": [
+      "2017-06-23",
+      "2017-06-25"
+    ],
+    "decision_development": [
+      "2017-06-22",
+      "2017-06-27"
+    ],
+    "final_test": [
+      "2017-06-15",
+      "2017-06-24",
+      "2017-06-30"
+    ]
+  },
+  "cv_folds": [
+    {
+      "fold": 1,
+      "train_dates": [
+        "2017-06-14",
+        "2017-06-16",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-26",
+        "2017-06-29"
+      ],
+      "validation_dates": [
+        "2017-06-13",
+        "2017-06-28"
+      ]
+    },
+    {
+      "fold": 2,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-16",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-26",
+        "2017-06-28"
+      ],
+      "validation_dates": [
+        "2017-06-14",
+        "2017-06-29"
+      ]
+    },
+    {
+      "fold": 3,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-14",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-28",
+        "2017-06-29"
+      ],
+      "validation_dates": [
+        "2017-06-16",
+        "2017-06-26"
+      ]
+    },
+    {
+      "fold": 4,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-14",
+        "2017-06-16",
+        "2017-06-26",
+        "2017-06-28",
+        "2017-06-29"
+      ],
+      "validation_dates": [
+        "2017-06-20",
+        "2017-06-21"
+      ]
+    }
+  ],
+  "final_test_freeze": {
+    "frozen": true,
+    "statement": "The final_test dates are permanently sealed until all model, conformal-prediction, and cleaning-decision choices are frozen.",
+    "prohibited_uses": [
+      "model architecture, hyperparameter, checkpoint, or epoch selection",
+      "conformal method, score, bin, confidence level, or quantile selection",
+      "cleaning-rule, threshold, or policy selection"
+    ],
+    "allowed_use": "One-time final evaluation after all development decisions are frozen."
+  }
+}
