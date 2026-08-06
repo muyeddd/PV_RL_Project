@@ -1,0 +1,2 @@
+epoch,learning_rate,train_loss,train_mae,train_rmse,train_r2,train_sample_count,validation_loss,validation_mae,validation_rmse,validation_r2,validation_sample_count,epoch_duration_seconds,improved
+1,0.0001,0.012529931324501201,0.06780691666067036,0.11193717569692702,0.8132520924192143,19805,0.0060931024722859104,0.052212382106283727,0.07805832743833777,0.9158386667884495,5911,748.4726693999983,True

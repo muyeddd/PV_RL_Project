@@ -1,0 +1,4 @@
+splits/date_grouped_v1/split_manifest.csv text eol=lf
+splits/date_grouped_v1/split_summary.csv text eol=lf
+splits/date_grouped_v1/dataset_fingerprint.json text eol=lf
+configs/splits/date_grouped_v1.json text eol=lf

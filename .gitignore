@@ -4,5 +4,10 @@ data/
 # 模型权重
 outputs/models_ckpt/
 
+# date_grouped_v1 training weights stay local; keep JSON/CSV run records trackable.
+outputs/date_grouped_v1/**/*.pth
+outputs/date_grouped_v1/**/*.pt
+outputs/date_grouped_v1/**/*.ckpt
+
 __pycache__/
 *.pyc

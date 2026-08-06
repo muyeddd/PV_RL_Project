@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "training_version": "resnet50_with_i_date_grouped_v1",
+  "split_version": "date_grouped_v1",
+  "model_name": "SolarResNet50WithI",
+  "seed": 42,
+  "epochs": 50,
+  "batch_size": 8,
+  "num_workers": 0,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.0001,
+  "patience": 8,
+  "amp": true,
+  "pretrained": true,
+  "note": "Conservative initial configuration for an RTX 3050 Laptop GPU with 4 GB VRAM; not claimed to be optimal."
+}

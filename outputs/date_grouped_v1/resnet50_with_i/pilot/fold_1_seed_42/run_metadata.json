@@ -1,0 +1,61 @@
+{
+  "NOT_FOR_RESEARCH_METRICS": true,
+  "PILOT_RUN": true,
+  "completed_at_utc": "2026-08-06T14:57:41.929869+00:00",
+  "cuda_available": true,
+  "cuda_version": "13.0",
+  "dataset_fingerprint": {
+    "earliest_timestamp": "2017-06-13T09:46:49",
+    "filename_hash_canonicalization": "UTF-8 filenames sorted lexicographically and joined by LF with no trailing LF",
+    "independent_date_count": 15,
+    "latest_timestamp": "2017-06-30T15:58:00",
+    "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+    "schema_version": 1,
+    "sorted_filenames_sha256": "721aed71449310717b3b6d76c69ae279eb0035579589f9c5d7e82d3ecebd61f0",
+    "split_config_sha256": "9f845ad3b00e5abc0baad20239c7e728d1375704f41bdbc8faca18f8b5d1a1f1",
+    "split_version": "date_grouped_v1",
+    "total_files": 45754
+  },
+  "device": "cuda:0",
+  "duration_seconds": 749.1465012999979,
+  "fold": 1,
+  "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "gpu_total_memory_bytes": 4294443008,
+  "host": "DESKTOP-FGL0FVU",
+  "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+  "output_files": [
+    "best_model.pth",
+    "final_model.pth",
+    "training_config_snapshot.json",
+    "metrics_history.csv",
+    "final_metrics.json",
+    "run_metadata.json"
+  ],
+  "peak_memory_allocated_bytes": 745766400,
+  "peak_memory_reserved_bytes": 828375040,
+  "platform": "Windows-10-10.0.19045-SP0",
+  "pretrained": {
+    "pretrained_cache_path": "C:\\Users\\muye\\.cache\\torch\\hub\\checkpoints\\resnet50-11ad3fa6.pth",
+    "pretrained_cache_present_before_init": true,
+    "pretrained_load_success": true,
+    "pretrained_requested": true,
+    "pretrained_source": "torchvision:ResNet50_Weights.IMAGENET1K_V2",
+    "pretrained_used": true
+  },
+  "python_version": "3.11.15",
+  "random_seed_settings": {
+    "cuda_seed": 42,
+    "cudnn_benchmark": true,
+    "cudnn_deterministic": false,
+    "numpy_seed": 42,
+    "python_seed": 42,
+    "pythonhashseed": "42",
+    "strict_deterministic_algorithms": false,
+    "torch_seed": 42
+  },
+  "split_version": "date_grouped_v1",
+  "started_at_utc": "2026-08-06T14:45:12.753472+00:00",
+  "torch_version": "2.10.0+cu130",
+  "torchvision_version": "0.25.0+cu130",
+  "training_version": "resnet50_with_i_date_grouped_v1"
+}

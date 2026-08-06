@@ -137,8 +137,8 @@ def load_fold_records(
     frozen manifest. Label and irradiance values are not read or consulted.
     """
 
-    if isinstance(fold, bool) or not isinstance(fold, int) or fold <= 0:
-        raise ValueError("fold must be a positive integer")
+    if isinstance(fold, bool) or not isinstance(fold, int) or fold not in range(1, 5):
+        raise ValueError("fold must be an integer from 1 to 4")
 
     manifest = _read_manifest(Path(manifest_path))
     model_records = manifest[

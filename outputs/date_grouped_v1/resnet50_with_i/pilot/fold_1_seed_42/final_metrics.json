@@ -1,0 +1,33 @@
+{
+  "NOT_FOR_RESEARCH_METRICS": true,
+  "PILOT_RUN": true,
+  "best_epoch": 1,
+  "best_validation_metrics": {
+    "duration_seconds": 103.37013499999739,
+    "loss": 0.0060931024722859104,
+    "mae": 0.052212382106283727,
+    "r2": 0.9158386667884495,
+    "rmse": 0.07805832743833777,
+    "sample_count": 5911
+  },
+  "completed_epochs": 1,
+  "duration_seconds": 749.1465012999979,
+  "final_train_metrics": {
+    "duration_seconds": 645.1002716000003,
+    "loss": 0.012529931324501201,
+    "mae": 0.06780691666067036,
+    "r2": 0.8132520924192143,
+    "rmse": 0.11193717569692702,
+    "sample_count": 19805
+  },
+  "final_validation_metrics": {
+    "duration_seconds": 103.37013499999739,
+    "loss": 0.0060931024722859104,
+    "mae": 0.052212382106283727,
+    "r2": 0.9158386667884495,
+    "rmse": 0.07805832743833777,
+    "sample_count": 5911
+  },
+  "fold": 1,
+  "split_version": "date_grouped_v1"
+}
