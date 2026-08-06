@@ -1,0 +1,20 @@
+{
+  "NOT_FOR_RESEARCH_METRICS": true,
+  "device": "cuda:0",
+  "fold": 1,
+  "full_train_count": 19805,
+  "full_validation_count": 5911,
+  "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "gpu_total_memory_bytes": 4294443008,
+  "peak_memory_allocated_bytes": 508720128,
+  "peak_memory_reserved_bytes": 549453824,
+  "pretrained_used": true,
+  "seed": 42,
+  "smoke_train_count": 4,
+  "smoke_validation_count": 4,
+  "split_version": "date_grouped_v1",
+  "train_batches_run": 2,
+  "train_loss": 0.13550981879234314,
+  "validation_batches_run": 2,
+  "validation_loss": 0.15180319547653198
+}
