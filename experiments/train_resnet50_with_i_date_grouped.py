@@ -6,10 +6,12 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 import platform
 import random
 import socket
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -437,7 +439,67 @@ def run_epoch(
 
     metrics = accumulator.compute()
     metrics["duration_seconds"] = time.perf_counter() - phase_start
+    metrics["samples_per_second"] = (
+        metrics["sample_count"] / metrics["duration_seconds"]
+    )
+    metrics["non_finite_detected"] = not all(
+        math.isfinite(float(metrics[name]))
+        for name in ("loss", "mae", "rmse", "r2")
+    )
     return metrics
+
+
+def query_gpu_telemetry() -> dict[str, Any]:
+    """Collect lightweight stability telemetry without adding a dependency."""
+
+    observed_at = datetime.now(timezone.utc).isoformat()
+    if not torch.cuda.is_available():
+        return {
+            "observed_at_utc": observed_at,
+            "query_success": False,
+            "error": "CUDA is unavailable",
+        }
+    query_fields = (
+        "temperature.gpu",
+        "clocks.current.sm",
+        "clocks.max.sm",
+        "utilization.gpu",
+        "clocks_event_reasons.sw_thermal_slowdown",
+        "clocks_event_reasons.hw_thermal_slowdown",
+        "clocks_event_reasons.hw_power_brake_slowdown",
+    )
+    try:
+        completed = subprocess.run(
+            [
+                "nvidia-smi",
+                f"--query-gpu={','.join(query_fields)}",
+                "--format=csv,noheader,nounits",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        values = [item.strip() for item in completed.stdout.strip().split(",")]
+        if len(values) != len(query_fields):
+            raise ValueError(f"Expected {len(query_fields)} values, got {len(values)}")
+        return {
+            "observed_at_utc": observed_at,
+            "query_success": True,
+            "temperature_c": float(values[0]),
+            "sm_clock_mhz": float(values[1]),
+            "sm_clock_max_mhz": float(values[2]),
+            "gpu_utilization_percent": float(values[3]),
+            "software_thermal_slowdown": values[4],
+            "hardware_thermal_slowdown": values[5],
+            "hardware_power_brake_slowdown": values[6],
+        }
+    except (OSError, subprocess.SubprocessError, ValueError) as error:
+        return {
+            "observed_at_utc": observed_at,
+            "query_success": False,
+            "error": f"{type(error).__name__}: {error}",
+        }
 
 
 def _pretrained_provenance(requested: bool) -> dict[str, Any]:
@@ -647,9 +709,16 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     epochs_without_improvement = 0
     final_train_metrics = None
     final_validation_metrics = None
+    gpu_telemetry_samples: list[dict[str, Any]] = []
 
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.perf_counter()
+        if device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(device)
+        telemetry_epoch_start = query_gpu_telemetry()
+        telemetry_epoch_start["epoch"] = epoch
+        telemetry_epoch_start["stage"] = "epoch_start"
+        gpu_telemetry_samples.append(telemetry_epoch_start)
         print(f"Epoch {epoch}/{args.epochs} starting", flush=True)
         train_metrics = run_epoch(
             model,
@@ -661,6 +730,10 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             scaler=scaler,
             phase="train",
         )
+        telemetry_after_train = query_gpu_telemetry()
+        telemetry_after_train["epoch"] = epoch
+        telemetry_after_train["stage"] = "after_train"
+        gpu_telemetry_samples.append(telemetry_after_train)
         validation_metrics = run_epoch(
             model,
             validation_loader,
@@ -671,7 +744,48 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             scaler=None,
             phase="validation",
         )
+        telemetry_after_validation = query_gpu_telemetry()
+        telemetry_after_validation["epoch"] = epoch
+        telemetry_after_validation["stage"] = "after_validation"
+        gpu_telemetry_samples.append(telemetry_after_validation)
         scheduler.step(validation_metrics["rmse"])
+
+        epoch_peak_allocated = (
+            int(torch.cuda.max_memory_allocated(device))
+            if device.type == "cuda"
+            else 0
+        )
+        epoch_peak_reserved = (
+            int(torch.cuda.max_memory_reserved(device))
+            if device.type == "cuda"
+            else 0
+        )
+        epoch_non_finite = bool(
+            train_metrics["non_finite_detected"]
+            or validation_metrics["non_finite_detected"]
+        )
+        successful_telemetry = [
+            sample
+            for sample in (
+                telemetry_epoch_start,
+                telemetry_after_train,
+                telemetry_after_validation,
+            )
+            if sample.get("query_success")
+        ]
+        epoch_temperatures = [
+            sample["temperature_c"] for sample in successful_telemetry
+        ]
+        epoch_sm_clocks = [sample["sm_clock_mhz"] for sample in successful_telemetry]
+        epoch_thermal_slowdown = any(
+            sample["software_thermal_slowdown"] == "Active"
+            or sample["hardware_thermal_slowdown"] == "Active"
+            for sample in successful_telemetry
+        )
+        epoch_power_brake_slowdown = any(
+            sample["hardware_power_brake_slowdown"] == "Active"
+            for sample in successful_telemetry
+        )
 
         improved = validation_metrics["rmse"] < best_validation_rmse
         if improved:
@@ -682,6 +796,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         else:
             epochs_without_improvement += 1
 
+        epoch_duration_seconds = time.perf_counter() - epoch_start
         epoch_metrics = {
             "epoch": epoch,
             "learning_rate": optimizer.param_groups[0]["lr"],
@@ -690,12 +805,39 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "train_rmse": train_metrics["rmse"],
             "train_r2": train_metrics["r2"],
             "train_sample_count": train_metrics["sample_count"],
+            "train_duration_seconds": train_metrics["duration_seconds"],
+            "train_samples_per_second": train_metrics["samples_per_second"],
             "validation_loss": validation_metrics["loss"],
             "validation_mae": validation_metrics["mae"],
             "validation_rmse": validation_metrics["rmse"],
             "validation_r2": validation_metrics["r2"],
             "validation_sample_count": validation_metrics["sample_count"],
-            "epoch_duration_seconds": time.perf_counter() - epoch_start,
+            "validation_duration_seconds": validation_metrics["duration_seconds"],
+            "validation_samples_per_second": validation_metrics[
+                "samples_per_second"
+            ],
+            "epoch_duration_seconds": epoch_duration_seconds,
+            "epoch_samples_per_second": (
+                (train_metrics["sample_count"] + validation_metrics["sample_count"])
+                / epoch_duration_seconds
+            ),
+            "gpu_peak_allocated_bytes": epoch_peak_allocated,
+            "gpu_peak_reserved_bytes": epoch_peak_reserved,
+            "non_finite_detected": epoch_non_finite,
+            "gpu_temperature_min_c": min(epoch_temperatures)
+            if epoch_temperatures
+            else None,
+            "gpu_temperature_max_c": max(epoch_temperatures)
+            if epoch_temperatures
+            else None,
+            "gpu_sm_clock_min_mhz": min(epoch_sm_clocks)
+            if epoch_sm_clocks
+            else None,
+            "gpu_sm_clock_max_mhz": max(epoch_sm_clocks)
+            if epoch_sm_clocks
+            else None,
+            "gpu_thermal_slowdown_observed": epoch_thermal_slowdown,
+            "gpu_power_brake_slowdown_observed": epoch_power_brake_slowdown,
             "improved": improved,
         }
         history.append(epoch_metrics)
@@ -746,12 +888,59 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     torch.save(final_payload, output_dir / "final_model.pth")
 
     duration_seconds = time.perf_counter() - run_started_perf
-    peak_allocated = (
-        torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0
+    peak_allocated = max(row["gpu_peak_allocated_bytes"] for row in history)
+    peak_reserved = max(row["gpu_peak_reserved_bytes"] for row in history)
+    non_finite_detected = any(row["non_finite_detected"] for row in history)
+    successful_telemetry = [
+        sample for sample in gpu_telemetry_samples if sample.get("query_success")
+    ]
+    temperatures = [sample["temperature_c"] for sample in successful_telemetry]
+    sm_clocks = [sample["sm_clock_mhz"] for sample in successful_telemetry]
+    thermal_slowdown_observed = any(
+        sample["software_thermal_slowdown"] == "Active"
+        or sample["hardware_thermal_slowdown"] == "Active"
+        for sample in successful_telemetry
     )
-    peak_reserved = (
-        torch.cuda.max_memory_reserved(device) if device.type == "cuda" else 0
+    power_brake_slowdown_observed = any(
+        sample["hardware_power_brake_slowdown"] == "Active"
+        for sample in successful_telemetry
     )
+    total_train_samples = sum(row["train_sample_count"] for row in history)
+    total_train_duration = sum(row["train_duration_seconds"] for row in history)
+    total_processed_samples = sum(
+        row["train_sample_count"] + row["validation_sample_count"]
+        for row in history
+    )
+    total_phase_duration = sum(
+        row["train_duration_seconds"] + row["validation_duration_seconds"]
+        for row in history
+    )
+    steady_state_rows = history[1:] if len(history) > 1 else history
+    stability_summary = {
+        "oom_occurred": False,
+        "non_finite_detected": non_finite_detected,
+        "gpu_temperature_min_c": min(temperatures) if temperatures else None,
+        "gpu_temperature_max_c": max(temperatures) if temperatures else None,
+        "gpu_sm_clock_min_mhz": min(sm_clocks) if sm_clocks else None,
+        "gpu_sm_clock_max_mhz": max(sm_clocks) if sm_clocks else None,
+        "gpu_thermal_slowdown_observed": thermal_slowdown_observed,
+        "gpu_power_brake_slowdown_observed": power_brake_slowdown_observed,
+        "obvious_clock_throttling_detected": (
+            thermal_slowdown_observed or power_brake_slowdown_observed
+        ),
+        "train_samples_per_second_overall": (
+            total_train_samples / total_train_duration
+        ),
+        "train_samples_per_second_steady_state": sample_weighted_average(
+            [row["train_samples_per_second"] for row in steady_state_rows],
+            [row["train_sample_count"] for row in steady_state_rows],
+        ),
+        "train_and_validation_samples_per_second_overall": (
+            total_processed_samples / total_phase_duration
+        ),
+        "gpu_telemetry_samples_attempted": len(gpu_telemetry_samples),
+        "gpu_telemetry_samples_successful": len(successful_telemetry),
+    }
     final_metrics = {
         "split_version": run_context["split_version"],
         "fold": args.fold,
@@ -760,6 +949,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "best_validation_metrics": best_validation_metrics,
         "final_train_metrics": final_train_metrics,
         "final_validation_metrics": final_validation_metrics,
+        "epoch_metrics": history,
+        "stability_summary": stability_summary,
         "duration_seconds": duration_seconds,
         "PILOT_RUN": args.pilot_run,
         "NOT_FOR_RESEARCH_METRICS": args.pilot_run,
@@ -786,6 +977,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "peak_memory_allocated_bytes": peak_allocated,
         "peak_memory_reserved_bytes": peak_reserved,
+        "stability_summary": stability_summary,
+        "gpu_telemetry_samples": gpu_telemetry_samples,
         "started_at_utc": run_started_utc.isoformat(),
         "completed_at_utc": datetime.now(timezone.utc).isoformat(),
         "duration_seconds": duration_seconds,

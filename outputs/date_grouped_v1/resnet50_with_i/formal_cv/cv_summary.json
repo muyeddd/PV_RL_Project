@@ -1,0 +1,249 @@
+{
+  "aggregate": {
+    "best_epoch": {
+      "max": 7.0,
+      "mean": 5.0,
+      "min": 2.0,
+      "std": 2.160246899469287
+    },
+    "completed_epochs": {
+      "max": 15.0,
+      "mean": 13.0,
+      "min": 10.0,
+      "std": 2.160246899469287
+    },
+    "gpu_max_temperature_c": {
+      "max": 85.0,
+      "mean": 85.0,
+      "min": 85.0,
+      "std": 0.0
+    },
+    "gpu_peak_allocated_bytes": {
+      "max": 1813954048.0,
+      "mean": 1811873152.0,
+      "min": 1806941184.0,
+      "std": 3337390.5471382877
+    },
+    "gpu_peak_reserved_bytes": {
+      "max": 2390753280.0,
+      "mean": 2327838720.0,
+      "min": 2262827008.0,
+      "std": 61093988.84034005
+    },
+    "steady_train_samples_per_second": {
+      "max": 179.12705538697475,
+      "mean": 177.7603197683569,
+      "min": 175.86193059402135,
+      "std": 1.3801429713716475
+    },
+    "training_time_seconds": {
+      "max": 1830.0909208999947,
+      "mean": 1651.0759072250003,
+      "min": 1296.0961020000104,
+      "std": 248.711318759756
+    },
+    "validation_mae": {
+      "max": 0.18137175283353169,
+      "mean": 0.08980149252161185,
+      "min": 0.03569170470183547,
+      "std": 0.06526569542894159
+    },
+    "validation_r2": {
+      "max": 0.9322977668338097,
+      "mean": 0.6438527079081331,
+      "min": 0.39310042443878424,
+      "std": 0.27713314666313693
+    },
+    "validation_rmse": {
+      "max": 0.2532051380414243,
+      "mean": 0.1404925291014507,
+      "min": 0.07001070245446339,
+      "std": 0.08069357501936893
+    }
+  },
+  "completed_at_utc": "2026-08-08T06:39:15.771630+00:00",
+  "configuration": {
+    "amp": true,
+    "batch_size": 32,
+    "early_stopping_metric": "validation_rmse",
+    "epochs": 50,
+    "learning_rate": 0.0001,
+    "num_workers": 4,
+    "patience": 8,
+    "pretrained": true,
+    "seed": 42,
+    "weight_decay": 0.0001
+  },
+  "final_test_accessed": false,
+  "folds": [
+    {
+      "aggregate": "",
+      "best_epoch": 6,
+      "completed_epochs": 14,
+      "early_stopped": true,
+      "fold": 1,
+      "gpu_max_temperature_c": 85.0,
+      "gpu_peak_allocated_bytes": 1806941184,
+      "gpu_peak_reserved_bytes": 2390753280,
+      "late_vs_reference_throughput_ratio": 0.9952600121465648,
+      "non_finite_detected": false,
+      "oom_occurred": false,
+      "output_dir": "E:\\PV_RL_Project\\outputs\\date_grouped_v1\\resnet50_with_i\\formal_cv\\fold_1_seed_42",
+      "row_type": "fold",
+      "steady_train_samples_per_second": 179.12705538697475,
+      "sustained_throughput_decline": false,
+      "thermal_slowdown_observed": true,
+      "train_count": 19805,
+      "train_dates": [
+        "2017-06-14",
+        "2017-06-16",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-26",
+        "2017-06-29"
+      ],
+      "training_time_seconds": 1816.624787599998,
+      "validation_count": 5911,
+      "validation_dates": [
+        "2017-06-13",
+        "2017-06-28"
+      ],
+      "validation_mae": 0.03569170470183547,
+      "validation_r2": 0.9322977668338097,
+      "validation_rmse": 0.07001070245446339
+    },
+    {
+      "aggregate": "",
+      "best_epoch": 7,
+      "completed_epochs": 15,
+      "early_stopped": true,
+      "fold": 2,
+      "gpu_max_temperature_c": 85.0,
+      "gpu_peak_allocated_bytes": 1813954048,
+      "gpu_peak_reserved_bytes": 2367684608,
+      "late_vs_reference_throughput_ratio": 0.9898689795148082,
+      "non_finite_detected": false,
+      "oom_occurred": false,
+      "output_dir": "E:\\PV_RL_Project\\outputs\\date_grouped_v1\\resnet50_with_i\\formal_cv\\fold_2_seed_42",
+      "row_type": "fold",
+      "steady_train_samples_per_second": 178.25110032390452,
+      "sustained_throughput_decline": false,
+      "thermal_slowdown_observed": true,
+      "train_count": 18524,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-16",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-26",
+        "2017-06-28"
+      ],
+      "training_time_seconds": 1830.0909208999947,
+      "validation_count": 7192,
+      "validation_dates": [
+        "2017-06-14",
+        "2017-06-29"
+      ],
+      "validation_mae": 0.05152377832685319,
+      "validation_r2": 0.8294821263205796,
+      "validation_rmse": 0.09734512079663352
+    },
+    {
+      "aggregate": "",
+      "best_epoch": 2,
+      "completed_epochs": 10,
+      "early_stopped": true,
+      "fold": 3,
+      "gpu_max_temperature_c": 85.0,
+      "gpu_peak_allocated_bytes": 1813888512,
+      "gpu_peak_reserved_bytes": 2262827008,
+      "late_vs_reference_throughput_ratio": 0.9927794665546048,
+      "non_finite_detected": false,
+      "oom_occurred": false,
+      "output_dir": "E:\\PV_RL_Project\\outputs\\date_grouped_v1\\resnet50_with_i\\formal_cv\\fold_3_seed_42",
+      "row_type": "fold",
+      "steady_train_samples_per_second": 175.86193059402135,
+      "sustained_throughput_decline": false,
+      "thermal_slowdown_observed": true,
+      "train_count": 19216,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-14",
+        "2017-06-20",
+        "2017-06-21",
+        "2017-06-28",
+        "2017-06-29"
+      ],
+      "training_time_seconds": 1296.0961020000104,
+      "validation_count": 6500,
+      "validation_dates": [
+        "2017-06-16",
+        "2017-06-26"
+      ],
+      "validation_mae": 0.18137175283353169,
+      "validation_r2": 0.39310042443878424,
+      "validation_rmse": 0.2532051380414243
+    },
+    {
+      "aggregate": "",
+      "best_epoch": 5,
+      "completed_epochs": 13,
+      "early_stopped": true,
+      "fold": 4,
+      "gpu_max_temperature_c": 85.0,
+      "gpu_peak_allocated_bytes": 1812708864,
+      "gpu_peak_reserved_bytes": 2290089984,
+      "late_vs_reference_throughput_ratio": 0.9931204652600921,
+      "non_finite_detected": false,
+      "oom_occurred": false,
+      "output_dir": "E:\\PV_RL_Project\\outputs\\date_grouped_v1\\resnet50_with_i\\formal_cv\\fold_4_seed_42",
+      "row_type": "fold",
+      "steady_train_samples_per_second": 177.80119276852707,
+      "sustained_throughput_decline": false,
+      "thermal_slowdown_observed": true,
+      "train_count": 19603,
+      "train_dates": [
+        "2017-06-13",
+        "2017-06-14",
+        "2017-06-16",
+        "2017-06-26",
+        "2017-06-28",
+        "2017-06-29"
+      ],
+      "training_time_seconds": 1661.491818399998,
+      "validation_count": 6113,
+      "validation_dates": [
+        "2017-06-20",
+        "2017-06-21"
+      ],
+      "validation_mae": 0.09061873422422703,
+      "validation_r2": 0.4205305140393588,
+      "validation_rmse": 0.14140915511328167
+    }
+  ],
+  "forbidden_roles_accessed": [],
+  "formal_model_development_results": true,
+  "headline": {
+    "validation_mae_mean": 0.08980149252161185,
+    "validation_mae_std": 0.06526569542894159,
+    "validation_r2_mean": 0.6438527079081331,
+    "validation_r2_std": 0.27713314666313693,
+    "validation_rmse_mean": 0.1404925291014507,
+    "validation_rmse_std": 0.08069357501936893
+  },
+  "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+  "model": "SolarResNet50WithI",
+  "non_finite_detected": false,
+  "oom_occurred": false,
+  "output_files": [
+    "cv_summary.csv",
+    "cv_summary.json"
+  ],
+  "schema_version": 1,
+  "split_version": "date_grouped_v1",
+  "started_at_utc": "2026-08-08T04:48:47.894377+00:00",
+  "std_ddof": 1,
+  "sustained_throughput_decline_detected": false,
+  "total_fold_training_time_seconds": 6604.303628900001,
+  "training_version": "resnet50_with_i_date_grouped_v1"
+}

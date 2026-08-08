@@ -1,0 +1,86 @@
+{
+  "NOT_FOR_RESEARCH_METRICS": false,
+  "PILOT_RUN": false,
+  "amp_enabled": true,
+  "amp_requested": true,
+  "batch_size": 32,
+  "dataset_fingerprint": {
+    "earliest_timestamp": "2017-06-13T09:46:49",
+    "filename_hash_canonicalization": "UTF-8 filenames sorted lexicographically and joined by LF with no trailing LF",
+    "independent_date_count": 15,
+    "latest_timestamp": "2017-06-30T15:58:00",
+    "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+    "schema_version": 1,
+    "sorted_filenames_sha256": "721aed71449310717b3b6d76c69ae279eb0035579589f9c5d7e82d3ecebd61f0",
+    "split_config_sha256": "9f845ad3b00e5abc0baad20239c7e728d1375704f41bdbc8faca18f8b5d1a1f1",
+    "split_version": "date_grouped_v1",
+    "total_files": 45754
+  },
+  "early_stopping_metric": "validation_rmse",
+  "epochs": 50,
+  "fold": 4,
+  "forbidden_role_counts": {
+    "cp_calibration": 0,
+    "decision_development": 0,
+    "final_test": 0
+  },
+  "full_train_count": 19603,
+  "full_validation_count": 6113,
+  "image_preprocessing": {
+    "normalization_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "train": "Resize(256,256); RandomResizedCrop(224, scale=(0.85,1.0)); RandomHorizontalFlip(0.5); RandomRotation(7); ColorJitter(brightness=0.08,contrast=0.08,saturation=0.05,hue=0.02); ToTensor; ImageNet normalization",
+    "validation": "Resize(224,224); ToTensor; ImageNet normalization"
+  },
+  "image_root": "E:\\PV_RL_Project\\data\\raw\\PanelImages",
+  "learning_rate": 0.0001,
+  "manifest": "E:\\PV_RL_Project\\splits\\date_grouped_v1\\split_manifest.csv",
+  "manifest_sha256": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+  "num_workers": 4,
+  "optimizer": "AdamW",
+  "output_dir": "E:\\PV_RL_Project\\outputs\\date_grouped_v1\\resnet50_with_i\\formal_cv\\fold_4_seed_42",
+  "overwrite": false,
+  "patience": 8,
+  "pilot_run": false,
+  "pretrained_cache_path": "C:\\Users\\muye\\.cache\\torch\\hub\\checkpoints\\resnet50-11ad3fa6.pth",
+  "pretrained_cache_present_before_init": true,
+  "pretrained_load_success": true,
+  "pretrained_requested": true,
+  "pretrained_source": "torchvision:ResNet50_Weights.IMAGENET1K_V2",
+  "pretrained_used": true,
+  "random_seed_settings": {
+    "cuda_seed": 42,
+    "cudnn_benchmark": true,
+    "cudnn_deterministic": false,
+    "numpy_seed": 42,
+    "python_seed": 42,
+    "pythonhashseed": "42",
+    "strict_deterministic_algorithms": false,
+    "torch_seed": 42
+  },
+  "scheduler": "ReduceLROnPlateau(mode=min,factor=0.5,patience=2)",
+  "seed": 42,
+  "split_version": "date_grouped_v1",
+  "train_dates": [
+    "2017-06-13",
+    "2017-06-14",
+    "2017-06-16",
+    "2017-06-26",
+    "2017-06-28",
+    "2017-06-29"
+  ],
+  "training_version": "resnet50_with_i_date_grouped_v1",
+  "validation_dates": [
+    "2017-06-20",
+    "2017-06-21"
+  ],
+  "weight_decay": 0.0001
+}

@@ -5,12 +5,12 @@
   "model_name": "SolarResNet50WithI",
   "seed": 42,
   "epochs": 50,
-  "batch_size": 8,
-  "num_workers": 0,
+  "batch_size": 32,
+  "num_workers": 4,
   "learning_rate": 0.0001,
   "weight_decay": 0.0001,
   "patience": 8,
   "amp": true,
   "pretrained": true,
-  "note": "Conservative initial configuration for an RTX 3050 Laptop GPU with 4 GB VRAM; not claimed to be optimal."
+  "note": "Frozen formal-CV configuration selected by the date_grouped_v1 throughput benchmark and three-epoch stability pilot."
 }

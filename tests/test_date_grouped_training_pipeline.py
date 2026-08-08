@@ -116,7 +116,8 @@ class DateGroupedTrainingPipelineTests(unittest.TestCase):
         second = training.load_training_config()
         self.assertEqual(first, second)
         self.assertEqual(first["split_version"], "date_grouped_v1")
-        self.assertEqual(first["batch_size"], 8)
+        self.assertEqual(first["batch_size"], 32)
+        self.assertEqual(first["num_workers"], 4)
         self.assertTrue(first["amp"])
         self.assertTrue(first["pretrained"])
 
