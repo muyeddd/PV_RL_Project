@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "training_version": "resnet50_image_only_date_grouped_v1",
+  "split_version": "date_grouped_v1",
+  "model_name": "SolarResNet50ImageOnly",
+  "seed": 42,
+  "epochs": 50,
+  "batch_size": 32,
+  "num_workers": 4,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.0001,
+  "patience": 8,
+  "amp": true,
+  "pretrained": true,
+  "note": "Frozen formal-CV Image-only ablation configuration matched to ResNet50+I date_grouped_v1."
+}
