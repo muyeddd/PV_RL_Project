@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "training_version": "resnet50_image_only_lbalanced_date_grouped_v1",
+  "split_version": "date_grouped_v1",
+  "model_name": "SolarResNet50ImageOnly",
+  "seed": 42,
+  "epochs": 50,
+  "batch_size": 32,
+  "num_workers": 4,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.0001,
+  "patience": 8,
+  "amp": true,
+  "pretrained": true,
+  "sampling": {
+    "method": "WeightedRandomSampler",
+    "bin_edges": ["-inf", 0.1, 0.3, 0.5, 0.7, "+inf"],
+    "bin_interval_rule": "left-closed, right-open",
+    "weight_formula": "n_bin^-0.5",
+    "alpha": 0.5,
+    "normalize_weights": false,
+    "replacement": true,
+    "num_samples": "train_dataset_length",
+    "sampler_seed": 42,
+    "worker_generator_seed": 42,
+    "sanity_simulation_seed": 42,
+    "sanity_simulation_draws": 100000
+  },
+  "note": "Formal single-factor Image-only experiment: baseline training is unchanged except for sqrt inverse-frequency L-range weighted replacement sampling."
+}
