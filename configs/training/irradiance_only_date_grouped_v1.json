@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "training_version": "irradiance_only_date_grouped_v1",
+  "split_version": "date_grouped_v1",
+  "model_name": "IrradianceOnlyMLP",
+  "seed": 42,
+  "epochs": 50,
+  "batch_size": 32,
+  "num_workers": 4,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.0001,
+  "patience": 8,
+  "amp": true,
+  "pretrained": false,
+  "optimizer": "AdamW",
+  "scheduler": "ReduceLROnPlateau(mode=min,factor=0.5,patience=2)",
+  "loss": "MSELoss(reduction=mean)",
+  "early_stopping_metric": "validation_rmse",
+  "checkpoint_selection": "minimum_validation_rmse",
+  "input_preprocessing": {
+    "source": "raw irradiance parsed from selected model_development filenames",
+    "dtype": "float32",
+    "standardized": false,
+    "clipped": false,
+    "strict_unit_interval_assumed": false,
+    "physical_unit": null
+  },
+  "note": "Frozen formal-CV irradiance-only baseline matched to date_grouped_v1 ResNet50 ablations."
+}
