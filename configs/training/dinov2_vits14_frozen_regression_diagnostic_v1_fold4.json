@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "diagnostic_version": "dinov2_vits14_frozen_regression_diagnostic_v1",
+  "split_version": "date_grouped_v1",
+  "feature_version": "dinov2_vits14_frozen_v1",
+  "feature_cache_dir": "features/dinov2_vits14_frozen_v1",
+  "output_root": "outputs/date_grouped_v1/dinov2_vits14_frozen_regression_diagnostic_v1/fold_4",
+  "fold": 4,
+  "seed": 42,
+  "input_dimension": 384,
+  "hidden_dimension": 128,
+  "dropout": 0.3,
+  "feature_standardization": "training_fold_per_dimension_zscore",
+  "standard_deviation_epsilon": 1e-06,
+  "batch_size": 256,
+  "num_workers": 0,
+  "loss": "MSELoss",
+  "optimizer": "AdamW",
+  "weight_decay": 0.0001,
+  "max_epochs": 50,
+  "scheduler": "ReduceLROnPlateau",
+  "scheduler_factor": 0.5,
+  "scheduler_patience": 2,
+  "early_stopping_patience": 8,
+  "selection_metric": "validation_rmse",
+  "prediction_clipping": false,
+  "amp": false,
+  "variants": {
+    "A": {
+      "name": "standardized_sigmoid_lr1e4",
+      "output_directory": "variant_A",
+      "learning_rate": 0.0001,
+      "output_activation": "Sigmoid"
+    },
+    "B": {
+      "name": "standardized_sigmoid_lr1e3",
+      "output_directory": "variant_B",
+      "learning_rate": 0.001,
+      "output_activation": "Sigmoid"
+    },
+    "C": {
+      "name": "standardized_linear_lr1e3",
+      "output_directory": "variant_C",
+      "learning_rate": 0.001,
+      "output_activation": "Linear"
+    }
+  },
+  "expected_sample_count": 25716,
+  "expected_feature_shape": [25716, 384],
+  "expected_feature_dtype": "float32",
+  "expected_fold_validation_counts": {
+    "1": 5911,
+    "2": 7192,
+    "3": 6500,
+    "4": 6113
+  },
+  "expected_fold_validation_dates": {
+    "1": ["2017-06-13", "2017-06-28"],
+    "2": ["2017-06-14", "2017-06-29"],
+    "3": ["2017-06-16", "2017-06-26"],
+    "4": ["2017-06-20", "2017-06-21"]
+  },
+  "feature_cache_sha256": {
+    "features.npy": "aae47f76e3b4e4709f33f9bea1c8616d7a9f03933cf2380187e39c75f514b5c6",
+    "metadata.csv": "5e43fe080cfae304e6f232b0deb4a908cb8504d78a4e9a1fd9200d24119f234d",
+    "feature_manifest.json": "dc00a80d1071d48a6cad68d1d2e9709d2670cf597d326b12ba8e55de3d43745c",
+    "dataset_fingerprint.json": "4f858319d4466e971dbb6babfd246075ce73383db3fd20818ba8919a8f70c617"
+  }
+}

@@ -11,3 +11,12 @@ outputs/date_grouped_v1/**/*.ckpt
 
 __pycache__/
 *.pyc
+
+# Prevent new generated artifacts and large local caches from being staged.
+/outputs/
+/features/
+/cache/
+*.pth
+*.pt
+*.ckpt
+*.log

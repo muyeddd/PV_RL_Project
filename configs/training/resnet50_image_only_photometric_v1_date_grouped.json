@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "training_version": "resnet50_image_only_photometric_v1_date_grouped",
+  "split_version": "date_grouped_v1",
+  "model_name": "SolarResNet50ImageOnly",
+  "seed": 42,
+  "epochs": 50,
+  "batch_size": 32,
+  "num_workers": 4,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.0001,
+  "patience": 8,
+  "amp": true,
+  "pretrained": true,
+  "allowed_pilot_folds": [3, 4],
+  "protected_roles": [
+    "cp_calibration",
+    "decision_development",
+    "final_test"
+  ],
+  "pilot_output_namespace": "outputs/date_grouped_v1/resnet50_image_only_photometric_v1/pilot",
+  "photometric_augmentation": {
+    "brightness": 0.08,
+    "contrast": 0.08,
+    "saturation": 0.15,
+    "hue": 0.02,
+    "random_gamma": {
+      "probability": 0.5,
+      "gamma_min": 0.85,
+      "gamma_max": 1.15,
+      "gain": 1.0,
+      "position": "after_color_jitter_before_to_tensor",
+      "random_source": "torch_worker_rng"
+    }
+  },
+  "baseline_source_sha256_lf": {
+    "models/resnet50_image_only.py": "a391927d7b83604243cb65483832a4da0b1e071749d38263dcb34d14c13b67f1",
+    "configs/training/resnet50_image_only_date_grouped_v1.json": "3f45aea44251e51c4c6ee64f0aafca3218c54928a6c5a120d8e083cd24026473",
+    "experiments/train_resnet50_image_only_date_grouped.py": "0238f5fc413f04ac106dc1d66a9e32df7833e9f9a19615bc4ada8db8d67d711e",
+    "experiments/run_resnet50_image_only_date_grouped_cv.py": "976b11307dbb95ae80e5bb3f38093ccf38826dac33c3a13e90caa64fdae798f3"
+  },
+  "note": "Single controlled photometric pilot. Only saturation and random gamma differ from the frozen ResNet50 Image-only date_grouped_v1 baseline; Fold 3 and Fold 4 only."
+}

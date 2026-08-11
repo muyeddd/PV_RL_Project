@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "feature_version": "dinov2_vits14_frozen_v1",
+  "split_version": "date_grouped_v1",
+  "manifest_path": "splits/date_grouped_v1/split_manifest.csv",
+  "split_fingerprint_path": "splits/date_grouped_v1/dataset_fingerprint.json",
+  "image_root": "data/raw/PanelImages",
+  "output_dir": "features/dinov2_vits14_frozen_v1",
+  "allowed_top_level_role": "model_development",
+  "forbidden_top_level_roles": [
+    "cp_calibration",
+    "decision_development",
+    "final_test"
+  ],
+  "expected_sample_count": 25716,
+  "ordering": "filename_ascending",
+  "torch_hub_repo": "facebookresearch/dinov2",
+  "torch_hub_model": "dinov2_vits14",
+  "torch_hub_source": "official_cached_repository",
+  "cached_repository_glob": "facebookresearch_dinov2_*",
+  "cached_weight_filename": "dinov2_vits14_pretrain.pth",
+  "cached_weight_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+  "feature_dimension": 384,
+  "image_size": 224,
+  "batch_size": 32,
+  "num_workers": 4,
+  "amp": true,
+  "normalization": {
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  },
+  "smoke_sample_count": 32,
+  "source_artifact_sha256": {
+    "configs/splits/date_grouped_v1.json": "9f845ad3b00e5abc0baad20239c7e728d1375704f41bdbc8faca18f8b5d1a1f1",
+    "splits/date_grouped_v1/split_manifest.csv": "a354afc2b691719bf0cc3c3982033da833795006e3e3b0122cae07810bd83e02",
+    "splits/date_grouped_v1/split_summary.csv": "a3f7c524b2a4b0a992be9d24409dfb5dc427f09ddb50020a18f245fff0aedb61",
+    "splits/date_grouped_v1/dataset_fingerprint.json": "01c1563942e41d59461803a739f0269ef8167c7f480e32cf6e14c8a3757e13ad"
+  }
+}
