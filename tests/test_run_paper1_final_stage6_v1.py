@@ -88,6 +88,86 @@ def test_sealed_mode_rejects_random_role() -> None:
         stage6.validate_manifest(frame, stage6.TARGET_SEALED_DATES, enforce_expected_n=False)
 
 
+def test_sealed_basename_uses_frozen_image_root_without_changing_row_identity(monkeypatch) -> None:
+    source = pd.DataFrame({
+        "filename": [
+            "solar_Thu_Jun_15_10__0__0_2017_L_0.1_I_0.2.jpg",
+            "solar_Sat_Jun_24_10__0__1_2017_L_0.2_I_0.3.jpg",
+            "solar_Fri_Jun_30_10__0__2_2017_L_0.3_I_0.4.jpg",
+        ],
+        "timestamp": ["2017-06-15T10:00:00", "2017-06-24T10:00:01", "2017-06-30T10:00:02"],
+        "date": list(stage6.SEALED_DATES),
+    })
+    monkeypatch.setattr(stage6, "EXPECTED_N", {**stage6.EXPECTED_N, stage6.TARGET_SEALED_DATES: len(source)})
+    monkeypatch.setattr(stage6.pd, "read_csv", lambda path, usecols: source.loc[:, usecols].copy())
+
+    result = stage6.load_manifest(stage6.TARGET_SEALED_DATES)
+
+    expected_paths = [
+        (stage6.SEALED_SOURCE_IMAGE_DIR.relative_to(stage6.PROJECT_ROOT) / name).as_posix()
+        for name in source["filename"]
+    ]
+    assert result["image_path"].tolist() == expected_paths
+    assert result["image_path"].tolist() != source["filename"].tolist()
+    assert result["sample_id"].tolist() == [
+        stage6.split_builder.sample_id_from_timestamp(value) for value in source["timestamp"]
+    ]
+    assert result["date"].tolist() == source["date"].tolist()
+    assert result["timestamp"].tolist() == source["timestamp"].tolist()
+    assert result["role"].tolist() == [stage6.SEALED_ROLE] * len(source)
+    assert len(result) == len(source)
+
+
+def test_random_test_manifest_image_paths_are_loaded_unchanged(monkeypatch) -> None:
+    expected = _manifest(stage6.TARGET_RANDOM_TEST, n=4)
+    monkeypatch.setattr(stage6, "EXPECTED_N", {**stage6.EXPECTED_N, stage6.TARGET_RANDOM_TEST: len(expected)})
+
+    def fake_read_csv(path, usecols):
+        assert path == stage6.RANDOM_MANIFEST
+        assert usecols == list(stage6.MANIFEST_COLUMNS)
+        return expected.loc[:, usecols].copy()
+
+    monkeypatch.setattr(stage6.pd, "read_csv", fake_read_csv)
+    result = stage6.load_manifest(stage6.TARGET_RANDOM_TEST)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_sealed_image_existence_guard_accepts_synthetic_files(tmp_path: Path) -> None:
+    records = _manifest(stage6.TARGET_SEALED_DATES, n=3)
+    image_dir = tmp_path / "data" / "raw" / "PanelImages"
+    image_dir.mkdir(parents=True)
+    paths = []
+    for index in range(len(records)):
+        path = image_dir / f"synthetic_{index}.jpg"
+        path.write_bytes(b"synthetic-not-an-opened-image")
+        paths.append(path.relative_to(tmp_path).as_posix())
+    records["image_path"] = paths
+
+    stage6.guard_sealed_image_paths(records, project_root=tmp_path, enforce_expected_n=False)
+
+
+def test_sealed_image_existence_guard_hard_fails_with_count_and_first_path(tmp_path: Path) -> None:
+    records = _manifest(stage6.TARGET_SEALED_DATES, n=3)
+    existing = tmp_path / "existing.jpg"
+    existing.write_bytes(b"synthetic-not-an-opened-image")
+    records["image_path"] = ["existing.jpg", "missing_first.jpg", "missing_second.jpg"]
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        stage6.guard_sealed_image_paths(records, project_root=tmp_path, enforce_expected_n=False)
+    message = str(exc_info.value)
+    assert "missing count=2" in message
+    assert str((tmp_path / "missing_first.jpg").resolve()) in message
+
+
+def test_sealed_path_guard_is_before_dataset_dataloader_and_inference() -> None:
+    source = inspect.getsource(getattr(stage6, "run"))
+    guard = source.index("guard_sealed_image_paths(records)")
+    dataset = source.index("Stage3A1InferenceDataset")
+    loader = source.index("DataLoader(")
+    inference = source.index("predict_deterministic")
+    assert guard < dataset < loader < inference
+
+
 def _random_provenance() -> dict[str, object]:
     return {"protocol": stage6.PROTOCOL, "stage": stage6.STAGE, "target": stage6.TARGET_RANDOM_TEST, "formal_final_evaluation": True, "random_test_accessed": True, "sealed_final_dates_accessed": False, "point_checkpoint_sha256_verified": True, "cqr_checkpoint_sha256_verified": True}
 
@@ -287,6 +367,14 @@ def test_provenance_final_flags() -> None:
     random = stage6.make_provenance(stage6.TARGET_RANDOM_TEST, point_verified=True, cqr_verified=True, random_completed=False)
     assert random["formal_final_evaluation"] is True and random["random_test_accessed"] is True and random["sealed_final_dates_accessed"] is False
     assert random["training_performed"] is False and random["mc_dropout_performed"] is False and random["qhat_recomputed_from_final"] is False
+    assert "sealed_first_attempt_failed" not in random
+
+    sealed = stage6.make_provenance(stage6.TARGET_SEALED_DATES, point_verified=True, cqr_verified=True, random_completed=True)
+    assert sealed["sealed_first_attempt_failed"] is True
+    assert sealed["sealed_first_attempt_failure_stage"] == "image_path_resolution_before_successful_image_load"
+    assert sealed["sealed_first_attempt_performance_results_generated"] is False
+    assert sealed["sealed_retry_reason"] == "fix_relative_image_path_resolution"
+    assert sealed["sealed_retry_changes_scientific_method"] is False
 
 
 def test_tests_do_not_read_final_formal_data_or_call_run() -> None:

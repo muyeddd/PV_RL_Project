@@ -18,6 +18,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
+from experiments import build_date_grouped_splits as date_split_builder
 from experiments import build_paper1_clean_random_v1 as split_builder
 from experiments import run_paper1_cqr_stage3a1_inference_v1 as stage3a1
 from experiments import run_paper1_cqr_stage3a2_intervals_v1 as stage3a2
@@ -49,6 +50,7 @@ CQR_CHECKPOINT_SHA256 = "fd5deea62c867fcffe3791f768752da9dc3a39a1c146244b1e225d6
 QHAT_ARTIFACT = stage3a2.OUTPUT_DIR / "cqr_conformal_calibration.json"
 RANDOM_MANIFEST = split_builder.OUTPUT_DIR / "random_test.csv"
 SEALED_SOURCE_MANIFEST = split_builder.SOURCE_DATE_MANIFEST
+SEALED_SOURCE_IMAGE_DIR = date_split_builder.DEFAULT_IMAGE_DIR
 OUTPUT_ROOT = PROJECT_ROOT / "outputs" / PROTOCOL / STAGE
 MANIFEST_COLUMNS = ("sample_id", "date", "timestamp", "image_path", "role")
 BIN_EDGES = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
@@ -179,6 +181,15 @@ def validate_manifest(frame: pd.DataFrame, target: str, *, enforce_expected_n: b
     return frame.loc[:, MANIFEST_COLUMNS].copy()
 
 
+def sealed_image_path_from_source_filename(filename: str) -> str:
+    """Reuse the frozen date-split image root and Paper1 relative locator format."""
+    value = str(filename)
+    source_filename = Path(value)
+    if not value or source_filename.is_absolute() or source_filename.name != value:
+        raise ValueError(f"Sealed source filename must be a basename: {value!r}")
+    return project_relative(SEALED_SOURCE_IMAGE_DIR / source_filename)
+
+
 def load_manifest(target: str) -> pd.DataFrame:
     target = validate_target(target)
     if target == TARGET_RANDOM_TEST:
@@ -186,8 +197,42 @@ def load_manifest(target: str) -> pd.DataFrame:
     else:
         source = pd.read_csv(SEALED_SOURCE_MANIFEST, usecols=["filename", "timestamp", "date"])
         source = source.loc[source["date"].astype(str).isin(SEALED_DATES)].copy()
-        frame = pd.DataFrame({"sample_id": [split_builder.sample_id_from_timestamp(str(v)) for v in source["timestamp"]], "date": source["date"].astype(str), "timestamp": source["timestamp"].astype(str), "image_path": source["filename"].astype(str), "role": SEALED_ROLE})
+        frame = pd.DataFrame({"sample_id": [split_builder.sample_id_from_timestamp(str(v)) for v in source["timestamp"]], "date": source["date"].astype(str), "timestamp": source["timestamp"].astype(str), "image_path": [sealed_image_path_from_source_filename(value) for value in source["filename"]], "role": SEALED_ROLE})
     return validate_manifest(frame.loc[:, MANIFEST_COLUMNS], target)
+
+
+def guard_sealed_image_paths(
+    records: pd.DataFrame,
+    *,
+    project_root: Path = PROJECT_ROOT,
+    enforce_expected_n: bool = True,
+) -> None:
+    """Fail before DataLoader/model inference if any sealed image file is absent."""
+    if "image_path" not in records.columns:
+        raise ValueError("SEALED_DATES image_path column is required")
+    if enforce_expected_n and len(records) != EXPECTED_N[TARGET_SEALED_DATES]:
+        raise ValueError(
+            "SEALED_DATES image path N guard failed: "
+            f"expected {EXPECTED_N[TARGET_SEALED_DATES]}, got {len(records)}"
+        )
+    locators = records["image_path"]
+    if locators.isna().any() or locators.astype(str).duplicated().any():
+        raise ValueError("SEALED_DATES image_path must be non-null and unique")
+
+    missing: list[Path] = []
+    for locator in locators.astype(str):
+        try:
+            resolved = _resolved(Path(project_root) / Path(locator))
+            exists = resolved.is_file()
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            raise ValueError(f"SEALED_DATES image path is not resolvable: {locator!r}") from exc
+        if not exists:
+            missing.append(resolved)
+    if missing:
+        raise FileNotFoundError(
+            "SEALED_DATES image existence guard failed: "
+            f"missing count={len(missing)}, first missing path={missing[0]}"
+        )
 
 
 def prepare_records(manifest: pd.DataFrame, target: str, stats: Mapping[str, Any], *, enforce_expected_n: bool = True) -> pd.DataFrame:
@@ -361,7 +406,16 @@ def make_config(target: str) -> dict[str, Any]:
 
 
 def make_provenance(target: str, *, point_verified: bool, cqr_verified: bool, random_completed: bool) -> dict[str, Any]:
-    return {**make_config(target), "formal_final_evaluation": True, "method_development_performed": False, "training_performed": False, "finetuning_performed": False, "point_checkpoint_sha256_verified": point_verified, "cqr_checkpoint_sha256_verified": cqr_verified, "qhat_recomputed_from_final": False, "final_recalibration_performed": False, "mc_dropout_performed": False, "new_risk_score_developed": False, "method_selected_from_final": False, "winner_declared": False, "currency_used": False, "gansu_price_used_in_core_evaluation": False, "random_test_accessed": target == TARGET_RANDOM_TEST, "sealed_final_dates_accessed": target == TARGET_SEALED_DATES, "random_test_stage6_completed_before_sealed": random_completed if target == TARGET_SEALED_DATES else False, "sealed_date_recalibration_performed": False}
+    provenance = {**make_config(target), "formal_final_evaluation": True, "method_development_performed": False, "training_performed": False, "finetuning_performed": False, "point_checkpoint_sha256_verified": point_verified, "cqr_checkpoint_sha256_verified": cqr_verified, "qhat_recomputed_from_final": False, "final_recalibration_performed": False, "mc_dropout_performed": False, "new_risk_score_developed": False, "method_selected_from_final": False, "winner_declared": False, "currency_used": False, "gansu_price_used_in_core_evaluation": False, "random_test_accessed": target == TARGET_RANDOM_TEST, "sealed_final_dates_accessed": target == TARGET_SEALED_DATES, "random_test_stage6_completed_before_sealed": random_completed if target == TARGET_SEALED_DATES else False, "sealed_date_recalibration_performed": False}
+    if target == TARGET_SEALED_DATES:
+        provenance.update({
+            "sealed_first_attempt_failed": True,
+            "sealed_first_attempt_failure_stage": "image_path_resolution_before_successful_image_load",
+            "sealed_first_attempt_performance_results_generated": False,
+            "sealed_retry_reason": "fix_relative_image_path_resolution",
+            "sealed_retry_changes_scientific_method": False,
+        })
+    return provenance
 
 
 def write_outputs(target: str, output_dir: Path, predictions: pd.DataFrame, pred_metrics: pd.DataFrame, int_metrics: pd.DataFrame, cond_q50: pd.DataFrame, cond_i: pd.DataFrame, actions: pd.DataFrame, decision_metrics: pd.DataFrame, sample_econ: pd.DataFrame, econ_metrics: pd.DataFrame, break_even: pd.DataFrame, config: Mapping[str, Any], provenance: Mapping[str, Any]) -> None:
@@ -392,7 +446,9 @@ def prepare_frozen_runtime(target: str) -> dict[str, Any]:
 def run(target: str, batch_size: int = 64) -> dict[str, Any]:
     target = validate_target(target); output_dir = output_dir_for(target); ensure_output_available(output_dir)
     runtime = prepare_frozen_runtime(target)
-    manifest = load_manifest(target); records = prepare_records(manifest, target, runtime["stats"]); dataset = stage3a1.Stage3A1InferenceDataset(records, runtime["transform"])
+    manifest = load_manifest(target); records = prepare_records(manifest, target, runtime["stats"])
+    if target == TARGET_SEALED_DATES: guard_sealed_image_paths(records)
+    dataset = stage3a1.Stage3A1InferenceDataset(records, runtime["transform"])
     device = runtime["device"]
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=device.type == "cuda")
     point = stage1a.predict_deterministic(runtime["point_model"], loader, device); quantiles = stage3a1.predict_deterministic(runtime["cqr_model"], loader, device)
