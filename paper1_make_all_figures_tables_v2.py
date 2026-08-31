@@ -1117,7 +1117,106 @@ def fig42_roadmap():
     ax.set_title("Research roadmap from trustworthy prediction to scheduling", fontsize=10.1, pad=10); savefig(fig, "Fig42_research_roadmap")
 
 # --- Tables 1-16 ---
-def table01(): save_table(pd.DataFrame(DATA_SPLIT, columns=["Role","N","Purpose"]), "Table01_data_partition", "Table 1. Data partition and purpose.")
+def table01():
+    columns = ["数据角色", "样本数", "主协议占比", "主要用途", "使用约束"]
+    rows = [
+        ["训练集", "25,830", "70%", "点预测与 CQR 模型训练", "仅用于模型拟合"],
+        ["模型验证集", "3,692", "10%", "模型选择与早停", "不参与最终评估"],
+        ["保形校准集", "2,951", "8%", "计算保形校准修正量", "不用于模型参数拟合"],
+        ["决策开发集", "1,844", "5%", "风险评价、决策规则与经济评价", "不作为最终测试"],
+        ["随机测试集", "2,582", "7%", "同分布最终独立评估", "方法冻结后一次性使用"],
+        ["未见日期测试集", "8,855", "—", "跨日期分布漂移压力测试", "不参与模型开发与校准"],
+    ]
+    df = pd.DataFrame(rows, columns=columns)
+    stem = "Table01_data_partition"
+    caption = "数据划分及各数据集使用规则"
+
+    df.to_csv(TAB_DIR / f"{stem}.csv", index=False)
+    try:
+        df.to_latex(
+            TAB_DIR / f"{stem}.tex",
+            index=False,
+            escape=True,
+            caption=caption,
+            label=f"tab:{stem}",
+            column_format=r"lccp{0.28\linewidth}p{0.28\linewidth}",
+        )
+    except Exception:
+        pass
+
+    table01_rc = {
+        "figure.dpi": 180,
+        "savefig.dpi": 600,
+        "figure.facecolor": "white",
+        "savefig.facecolor": "white",
+        "font.family": "sans-serif",
+        "font.sans-serif": [
+            "Microsoft YaHei",
+            "SimHei",
+            "Noto Sans CJK SC",
+            "Source Han Sans SC",
+            "Arial Unicode MS",
+            "DejaVu Sans",
+        ],
+        "font.size": 9.0,
+        "axes.unicode_minus": False,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+    with plt.rc_context(table01_rc):
+        fig, ax = plt.subplots(figsize=(11.1, 3.85))
+        ax.set_axis_off()
+        column_widths = [0.16, 0.12, 0.12, 0.30, 0.30]
+        table_bbox = [0.02, 0.18, 0.96, 0.81]
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="left",
+            colLoc="center",
+            colWidths=column_widths,
+            bbox=table_bbox,
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(9.0)
+        for (row, column), cell in table.get_celld().items():
+            cell.set_facecolor("white")
+            cell.set_linewidth(0.0)
+            cell.visible_edges = ""
+            cell.PAD = 0.07
+            text = cell.get_text()
+            text.set_va("center")
+            if row == 0:
+                text.set_weight("semibold")
+                text.set_ha("center" if column in (1, 2) else "left")
+            elif column in (1, 2):
+                text.set_ha("center")
+            else:
+                text.set_ha("left")
+
+        left, bottom, width, height = table_bbox
+        right = left + width
+        top = bottom + height
+        row_height = height / (len(df) + 1)
+        header_bottom = top - row_height
+        stress_test_boundary = bottom + row_height
+        ax.plot([left, right], [top, top], transform=ax.transAxes, color="#222222", linewidth=1.30)
+        ax.plot([left, right], [header_bottom, header_bottom], transform=ax.transAxes, color="#333333", linewidth=0.70)
+        ax.plot([left, right], [stress_test_boundary, stress_test_boundary], transform=ax.transAxes, color="#8A8A8A", linewidth=0.45)
+        ax.plot([left, right], [bottom, bottom], transform=ax.transAxes, color="#222222", linewidth=1.30)
+        ax.text(
+            left,
+            0.055,
+            "注：主协议占比以36,899个主协议样本为分母；未见日期测试集作为额外压力测试，不计入该比例。",
+            transform=ax.transAxes,
+            ha="left",
+            va="bottom",
+            fontsize=7.6,
+            color="#444444",
+        )
+
+        for ext in ("png", "pdf"):
+            fig.savefig(TAB_DIR / f"{stem}.{ext}", bbox_inches="tight", dpi=600 if ext == "png" else None)
+        plt.close(fig)
 
 def table02():
     rows = [["MODEL_VALIDATION", "point_pred", VAL_POINT["R2"], VAL_POINT["RMSE"], VAL_POINT["MAE"], VAL_POINT["Bias"]], ["MODEL_VALIDATION", "q50", VAL_Q50["R2"], VAL_Q50["RMSE"], VAL_Q50["MAE"], VAL_Q50["Bias"]]]
@@ -1265,12 +1364,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--only",
         type=str.lower,
-        metavar="FIGURE",
-        help="Generate one supported figure only (currently: fig03).",
+        metavar="ITEM",
+        help="Generate one supported item only (currently: fig03, table01).",
     )
     args = parser.parse_args()
-    if args.only not in (None, "fig03"):
-        parser.error(f"unknown figure '{args.only}'; supported value: fig03")
+    if args.only not in (None, "fig03", "table01"):
+        parser.error(f"unknown item '{args.only}'; supported values: fig03, table01")
 
     print("Paper1 full figure/table generation (v2)")
     print(f"Repository root: {ROOT}")
@@ -1278,6 +1377,8 @@ if __name__ == "__main__":
     print("This is report-only. No training, no recalibration, no formal-result overwrite.\n")
     if args.only == "fig03":
         fig03_data_split()
+    elif args.only == "table01":
+        table01()
     else:
         for fn in [fig01_framework, fig02_problem_to_redesign, fig03_data_split, fig04_date_distribution, fig05_date_role_heatmap, fig06_model_structure, fig07_training_curve, fig08_validation_scatter, fig09_random_scatter, fig10_error_distribution, fig11_residual_vs_true, fig12_mc_flow, fig13_mc_example, fig14_point_vs_mcmean, fig15_mc_std_distribution, fig16_picp, fig17_mpiw, fig18_interval_score, fig19_picp_mpiw, fig20_picp_intervalscore, fig21_cqr_flow, fig22_raw_vs_conformal, fig23_cqr_interval_examples, fig24_width_distribution, fig25_width_vs_q50, fig26_dev_vs_final, fig27_q50_conditional, fig28_irradiance_conditional, fig29_decision_rule, fig30_ader_main, fig31_decision_main_grouped, fig32_review_rate_vs_tau, fig33_ader_vs_tau, fig34_rr_ader_tradeoff, fig35_decision_flow, fig36_mean_regret, fig37_total_cost, fig38_regret_components, fig39_break_even, fig40_random_vs_sealed, fig41_date_grouped_folds, fig42_roadmap]:
             fn()
