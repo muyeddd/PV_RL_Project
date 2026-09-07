@@ -1067,22 +1067,150 @@ def fig10_error_distribution():
         savefig(fig, "Fig10_random_test_error_distribution")
 
 def fig11_residual_vs_true():
+    from matplotlib.colors import LinearSegmentedColormap
+
     df = load_random_predictions()
-    if df is None:
-        print("[SKIP] Fig11: RANDOM_TEST predictions.csv not found."); return
-    t, pred, *_ = prediction_cols(df)
-    if not t or not pred:
-        print("[SKIP] Fig11: true/pred columns not found."); return
-    y, pr = finite_xy(df[t], df[pred]); r = pr-y
-    fig, ax = plt.subplots(figsize=(5.2, 3.8))
-    ax.scatter(y, r, s=9, alpha=0.42, linewidths=0); ax.axhline(0, linestyle="--", linewidth=1.1)
-    bins = np.linspace(0, 1, 11); idx = np.digitize(y, bins, right=True); centers=[]; med=[]
-    for k in range(1, len(bins)):
-        m = idx == k
-        if m.any(): centers.append((bins[k-1]+bins[k])/2); med.append(np.median(r[m]))
-    if centers: ax.plot(centers, med, marker="o", markersize=3.5, linewidth=1.8, label="Binned median residual"); ax.legend(frameon=False)
-    ax.set_xlabel("Actual relative power loss"); ax.set_ylabel("Residual (predicted − actual)"); ax.set_title("Residual structure across power-loss levels"); style_ax(ax)
-    savefig(fig, "Fig11_residual_vs_true_loss")
+    metrics = load_random_prediction_metrics()
+    required_predictions = {"role", "target", "true_L", "point_pred"}
+    metric_names = ["N", "R2", "RMSE", "MAE", "bias"]
+    required_metrics = {"target", "scope", "model", *metric_names}
+    if (
+        df is None
+        or metrics is None
+        or df.empty
+        or not required_predictions.issubset(df.columns)
+        or not required_metrics.issubset(metrics.columns)
+    ):
+        print("[SKIP] Fig11: authoritative RANDOM_TEST predictions or metrics not found.")
+        return
+    if (
+        len(df) != 2582
+        or set(df["role"].astype(str)) != {"RANDOM_TEST"}
+        or set(df["target"].astype(str)) != {"random_test"}
+    ):
+        print("[SKIP] Fig11: RANDOM_TEST role, target or frozen sample count is inconsistent.")
+        return
+
+    values = df[["true_L", "point_pred"]].apply(pd.to_numeric, errors="coerce")
+    if values.isna().any().any() or not np.isfinite(values.to_numpy(float)).all():
+        print("[SKIP] Fig11: non-numeric or non-finite sample-level predictions found.")
+        return
+    pooled = metrics.loc[
+        (metrics["target"].astype(str) == "random_test")
+        & (metrics["scope"].astype(str) == "pooled")
+        & (metrics["model"].astype(str) == "point_pred")
+    ]
+    if len(pooled) != 1:
+        print("[SKIP] Fig11: expected exactly one pooled point_pred metrics row.")
+        return
+    frozen = pooled[metric_names].apply(pd.to_numeric, errors="coerce")
+    if frozen.isna().any().any() or not np.isfinite(frozen.to_numpy(float)).all():
+        print("[SKIP] Fig11: pooled metrics contain invalid values.")
+        return
+
+    y_true = values["true_L"].to_numpy(float)
+    pred = values["point_pred"].to_numpy(float)
+    residual = pred - y_true
+    absolute_error = np.abs(residual)
+    computed = {
+        "N": len(pred),
+        "R2": metric_r2(y_true, pred),
+        "RMSE": metric_rmse(y_true, pred),
+        "MAE": metric_mae(y_true, pred),
+        "bias": float(np.mean(residual)),
+    }
+    row = frozen.iloc[0]
+    if any(
+        not np.isclose(computed[key], float(row[key]), rtol=1e-9, atol=1e-12)
+        for key in metric_names
+    ):
+        print("[SKIP] Fig11: sample-level point_pred values do not match frozen metrics.")
+        return
+
+    # Shared quantile bins; merge duplicate boundaries without dropping samples.
+    edges = np.unique(np.quantile(y_true, np.linspace(0.0, 1.0, 15)))
+    if len(edges) == 1:
+        edges = np.histogram_bin_edges(y_true, bins=1)
+    bin_count = len(edges) - 1
+    centers = np.full(bin_count, np.nan)
+    # Interior boundaries assign every sample once, including both endpoints.
+    bin_index = np.searchsorted(edges[1:-1], y_true, side="right")
+    residual_quantiles = np.full((3, bin_count), np.nan)
+    absolute_quantiles = np.full((3, bin_count), np.nan)
+    for k in range(bin_count):
+        in_bin = bin_index == k
+        if np.any(in_bin):
+            centers[k] = np.median(y_true[in_bin])
+            residual_quantiles[:, k] = np.percentile(residual[in_bin], [10, 50, 90])
+            absolute_quantiles[:, k] = np.percentile(absolute_error[in_bin], [10, 50, 90])
+    # Empty bins remain NaN; ties can make occupied-bin counts unequal.
+    x_padding = 0.025 * (edges[-1] - edges[0])
+    x_limits = (edges[0] - x_padding, edges[-1] + x_padding)
+    density_cmap = LinearSegmentedColormap.from_list(
+        "fig11_blue_gray", ["#E8EEF1", "#B8C7CF", "#5A788A"]
+    )
+    fig11_rc = {
+        "figure.dpi": 180,
+        "savefig.dpi": 600,
+        "figure.facecolor": "white",
+        "savefig.facecolor": "white",
+        "axes.facecolor": "white",
+        "font.family": "sans-serif",
+        "font.sans-serif": [
+            "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
+            "SimHei", "Arial Unicode MS", "DejaVu Sans",
+        ],
+        "font.size": 8.8,
+        "axes.labelsize": 9.4,
+        "axes.titlesize": 9.7,
+        "xtick.labelsize": 8.2,
+        "ytick.labelsize": 8.2,
+        "axes.linewidth": 0.65,
+        "axes.unicode_minus": False,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+    with plt.rc_context(fig11_rc):
+        fig, axes = plt.subplots(1, 2, figsize=(9.5, 4.0), sharex=True)
+        ax = axes[0]
+        ax.hexbin(
+            y_true, residual, gridsize=42, mincnt=1, bins="log",
+            cmap=density_cmap, linewidths=0, zorder=2,
+        )
+        ax.axhline(0.0, color="#6A6E72", linestyle="--", linewidth=0.85,
+                   alpha=0.75, zorder=3)
+        ax.set_ylabel("预测残差")
+        ax.set_title("(a) 条件残差结构", loc="left", pad=7,
+                     fontweight="medium", color="#33383D")
+
+        ax = axes[1]
+        ax.set_ylabel("绝对预测误差")
+        ax.set_title("(b) 条件绝对误差结构", loc="left", pad=7,
+                     fontweight="medium", color="#33383D")
+        valid_p90 = absolute_quantiles[2][np.isfinite(absolute_quantiles[2])]
+        ymax = max(0.12, float(valid_p90.max()) * 1.08) if valid_p90.size else 0.12
+        ax.set_ylim(0, ymax)
+
+        for ax, quantiles in zip(axes, [residual_quantiles, absolute_quantiles]):
+            ax.fill_between(centers, quantiles[0], quantiles[2],
+                            color="#B8C7CF", alpha=0.22, linewidth=0, zorder=3)
+            ax.plot(centers, quantiles[1], color="#35505E", linewidth=1.7, zorder=4)
+            ax.set_xlabel("真实相对功率损失")
+            ax.set_xlim(x_limits)
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+            ax.grid(False, axis="x")
+            ax.grid(True, axis="y", color="#E8EBED", linewidth=0.4, alpha=0.45)
+            ax.set_axisbelow(True)
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color("#666B70")
+                spine.set_linewidth(0.65)
+            ax.xaxis.label.set_color("#33383D")
+            ax.yaxis.label.set_color("#33383D")
+            ax.tick_params(width=0.60, length=3.0, color="#666B70",
+                           labelcolor="#33383D")
+        fig.subplots_adjust(left=0.085, right=0.985, bottom=0.16, top=0.90, wspace=0.30)
+        savefig(fig, "Fig11_random_test_conditional_error_structure")
 
 def fig12_mc_flow():
     fig, ax = plt.subplots(figsize=(8.3, 2.8)); ax.axis("off")
@@ -1655,11 +1783,11 @@ if __name__ == "__main__":
         "--only",
         type=str.lower,
         metavar="ITEM",
-        help="Generate one supported item only (currently: fig03, fig09, fig10, table01).",
+        help="Generate one supported item only (currently: fig03, fig09, fig10, fig11, table01).",
     )
     args = parser.parse_args()
-    if args.only not in (None, "fig03", "fig09", "fig10", "table01"):
-        parser.error(f"unknown item '{args.only}'; supported values: fig03, fig09, fig10, table01")
+    if args.only not in (None, "fig03", "fig09", "fig10", "fig11", "table01"):
+        parser.error(f"unknown item '{args.only}'; supported values: fig03, fig09, fig10, fig11, table01")
 
     print("Paper1 full figure/table generation (v2)")
     print(f"Repository root: {ROOT}")
@@ -1671,6 +1799,8 @@ if __name__ == "__main__":
         fig09_random_scatter()
     elif args.only == "fig10":
         fig10_error_distribution()
+    elif args.only == "fig11":
+        fig11_residual_vs_true()
     elif args.only == "table01":
         table01()
     else:
