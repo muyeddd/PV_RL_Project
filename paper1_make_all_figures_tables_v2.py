@@ -911,22 +911,160 @@ def fig09_random_scatter():
 
 def fig10_error_distribution():
     df = load_random_predictions()
-    if df is None:
-        print("[SKIP] Fig10: RANDOM_TEST predictions.csv not found."); return
-    t, pred, *_ = prediction_cols(df)
-    if not t or not pred:
-        print("[SKIP] Fig10: true/pred columns not found."); return
-    y, pr = finite_xy(df[t], df[pred]); e = pr-y; ae = np.abs(e)
-    fig, ax = plt.subplots(figsize=(5.4, 3.8))
-    ax.hist(e, bins=45, density=True, alpha=0.72, edgecolor="white", linewidth=0.35)
-    counts, edges = np.histogram(e, bins=60, density=True); centers = (edges[:-1] + edges[1:]) / 2
-    smooth = np.convolve(counts, np.ones(5)/5, mode="same")
-    ax.plot(centers, smooth, linewidth=1.8, label="Smoothed density")
-    ax.axvline(np.mean(e), linestyle="--", linewidth=1.2, label=f"Mean = {np.mean(e):.3f}")
-    ax.axvline(np.median(e), linestyle=":", linewidth=1.4, label=f"Median = {np.median(e):.3f}")
-    ax.set_xlabel("Prediction residual (predicted − actual)"); ax.set_ylabel("Density"); ax.set_title("RANDOM_TEST residual distribution"); ax.legend(frameon=False); style_ax(ax)
-    ax.text(0.98, 0.96, f"MAE = {np.mean(ae):.3f}", transform=ax.transAxes, ha="right", va="top", fontsize=8.3)
-    savefig(fig, "Fig10_random_test_residual_distribution")
+    metrics = load_random_prediction_metrics()
+    required_predictions = {"role", "target", "true_L", "point_pred"}
+    metric_names = ["N", "R2", "RMSE", "MAE", "bias"]
+    required_metrics = {"target", "scope", "model", *metric_names}
+    if (
+        df is None
+        or metrics is None
+        or df.empty
+        or not required_predictions.issubset(df.columns)
+        or not required_metrics.issubset(metrics.columns)
+    ):
+        print("[SKIP] Fig10: authoritative RANDOM_TEST predictions or metrics not found.")
+        return
+    if (
+        len(df) != 2582
+        or set(df["role"].astype(str)) != {"RANDOM_TEST"}
+        or set(df["target"].astype(str)) != {"random_test"}
+    ):
+        print("[SKIP] Fig10: RANDOM_TEST role, target or frozen sample count is inconsistent.")
+        return
+
+    values = df[["true_L", "point_pred"]].apply(pd.to_numeric, errors="coerce")
+    if values.isna().any().any() or not np.isfinite(values.to_numpy(float)).all():
+        print("[SKIP] Fig10: non-numeric or non-finite sample-level predictions found.")
+        return
+    pooled = metrics.loc[
+        (metrics["target"].astype(str) == "random_test")
+        & (metrics["scope"].astype(str) == "pooled")
+        & (metrics["model"].astype(str) == "point_pred")
+    ]
+    if len(pooled) != 1:
+        print("[SKIP] Fig10: expected exactly one pooled point_pred metrics row.")
+        return
+    frozen = pooled[metric_names].apply(pd.to_numeric, errors="coerce")
+    if frozen.isna().any().any() or not np.isfinite(frozen.to_numpy(float)).all():
+        print("[SKIP] Fig10: pooled metrics contain invalid values.")
+        return
+
+    y_true = values["true_L"].to_numpy(float)
+    pred = values["point_pred"].to_numpy(float)
+    residual = pred - y_true
+    absolute_error = np.abs(residual)
+    computed = {
+        "N": len(pred),
+        "R2": metric_r2(y_true, pred),
+        "RMSE": metric_rmse(y_true, pred),
+        "MAE": metric_mae(y_true, pred),
+        "bias": float(np.mean(residual)),
+    }
+    row = frozen.iloc[0]
+    if any(
+        not np.isclose(computed[key], float(row[key]), rtol=1e-9, atol=1e-12)
+        for key in metric_names
+    ):
+        print("[SKIP] Fig10: sample-level point_pred values do not match frozen metrics.")
+        return
+
+    median_residual = float(np.median(residual))
+    p50, p90 = np.percentile(absolute_error, [50, 90])
+    abs_error_sorted = np.sort(absolute_error)
+    ecdf = np.arange(1, computed["N"] + 1) / computed["N"]
+    fd_edges = np.histogram_bin_edges(residual, bins="fd")
+    bin_count = int(np.clip(len(fd_edges) - 1, 30, 55))
+    density, edges = np.histogram(residual, bins=bin_count, density=True)
+    centers = (edges[:-1] + edges[1:]) / 2
+    # Light Gaussian-like smoothing of histogram density, not a KDE estimate.
+    offsets = np.arange(-3, 4, dtype=float)
+    kernel = np.exp(-0.5 * (offsets / 1.0) ** 2)
+    kernel /= kernel.sum()
+    smooth_density = np.convolve(density, kernel, mode="same")
+
+    fig10_rc = {
+        "figure.dpi": 180,
+        "savefig.dpi": 600,
+        "figure.facecolor": "white",
+        "savefig.facecolor": "white",
+        "axes.facecolor": "white",
+        "font.family": "sans-serif",
+        "font.sans-serif": [
+            "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
+            "SimHei", "Arial Unicode MS", "DejaVu Sans",
+        ],
+        "font.size": 8.8,
+        "axes.labelsize": 9.4,
+        "axes.titlesize": 9.7,
+        "xtick.labelsize": 8.2,
+        "ytick.labelsize": 8.2,
+        "axes.linewidth": 0.65,
+        "axes.unicode_minus": False,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+    with plt.rc_context(fig10_rc):
+        fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.9))
+        ax = axes[0]
+        ax.fill_between(
+            centers, 0, smooth_density, color="#A9BBC6", alpha=0.45,
+            linewidth=0, zorder=2,
+        )
+        ax.plot(centers, smooth_density, color="#4F6D7A", linewidth=1.7,
+                zorder=3)
+        ax.axvline(0.0, color="#6A6E72", linestyle="--", linewidth=0.85,
+                   alpha=0.75, zorder=2)
+        ax.text(
+            0.96, 0.94,
+            f"Bias = {computed['bias']:.4f}\nMedian = {median_residual:.4f}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=8.0,
+            linespacing=1.3, color="#33383D", zorder=4,
+        )
+        ax.set_xlabel("预测残差")
+        ax.set_ylabel("概率密度")
+        ax.set_title("(a) 残差分布", loc="left", pad=7, fontweight="medium", color="#33383D")
+        ax.set_ylim(bottom=0)
+        residual_padding = 0.03 * (edges[-1] - edges[0])
+        ax.set_xlim(edges[0] - residual_padding, edges[-1] + residual_padding)
+
+        ax = axes[1]
+        ax.step(abs_error_sorted, ecdf, where="post", color="#4F6D7A",
+                linewidth=1.8, zorder=3)
+        for probability, quantile in [(0.5, p50), (0.9, p90)]:
+            ax.hlines(probability, 0, quantile, color="#B7BEC3", linestyles="--",
+                       linewidth=0.7, alpha=0.75, zorder=1)
+            ax.vlines(quantile, 0, probability, color="#6A6E72",
+                      linestyles="--", linewidth=0.8, alpha=0.65, zorder=2)
+        ax.text(
+            0.96, 0.08,
+            f"P50 = {p50:.4f}\nP90 = {p90:.4f}",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=8.0,
+            linespacing=1.3, color="#33383D",
+            zorder=4,
+        )
+        ax.set_xlabel("绝对预测误差")
+        ax.set_ylabel("累积概率")
+        ax.set_title("(b) 绝对误差经验累积分布", loc="left", pad=7, fontweight="medium", color="#33383D")
+        ax.set_ylim(0, 1.0)
+        max_error = float(abs_error_sorted[-1])
+        ax.set_xlim(0, max_error * 1.04 if max_error > 0 else 0.01)
+        ax.set_yticks(np.linspace(0, 1.0, 6))
+
+        for ax in axes:
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+            ax.grid(False, axis="x")
+            ax.grid(True, axis="y", color="#E8EBED", linewidth=0.4, alpha=0.45)
+            ax.set_axisbelow(True)
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color("#666B70")
+                spine.set_linewidth(0.65)
+            ax.xaxis.label.set_color("#33383D")
+            ax.yaxis.label.set_color("#33383D")
+            ax.tick_params(width=0.60, length=3.0, color="#666B70",
+                           labelcolor="#33383D")
+        fig.subplots_adjust(left=0.075, right=0.985, bottom=0.16, top=0.90, wspace=0.28)
+        savefig(fig, "Fig10_random_test_error_distribution")
 
 def fig11_residual_vs_true():
     df = load_random_predictions()
@@ -1517,11 +1655,11 @@ if __name__ == "__main__":
         "--only",
         type=str.lower,
         metavar="ITEM",
-        help="Generate one supported item only (currently: fig03, fig09, table01).",
+        help="Generate one supported item only (currently: fig03, fig09, fig10, table01).",
     )
     args = parser.parse_args()
-    if args.only not in (None, "fig03", "fig09", "table01"):
-        parser.error(f"unknown item '{args.only}'; supported values: fig03, fig09, table01")
+    if args.only not in (None, "fig03", "fig09", "fig10", "table01"):
+        parser.error(f"unknown item '{args.only}'; supported values: fig03, fig09, fig10, table01")
 
     print("Paper1 full figure/table generation (v2)")
     print(f"Repository root: {ROOT}")
@@ -1531,6 +1669,8 @@ if __name__ == "__main__":
         fig03_data_split()
     elif args.only == "fig09":
         fig09_random_scatter()
+    elif args.only == "fig10":
+        fig10_error_distribution()
     elif args.only == "table01":
         table01()
     else:
