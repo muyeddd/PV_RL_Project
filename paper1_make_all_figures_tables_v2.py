@@ -753,9 +753,161 @@ def fig08_validation_scatter():
 
 def fig09_random_scatter():
     df = load_random_predictions()
-    if df is None:
-        print("[SKIP] Fig09: RANDOM_TEST predictions.csv not found."); return
-    simple_scatter_plot(df, "Fig09_random_test_actual_vs_predicted", "RANDOM_TEST: actual vs. predicted power loss", "$R^2$=0.925\nRMSE=0.078\nMAE=0.039")
+    metrics = load_random_prediction_metrics()
+    required_predictions = {"role", "target", "true_L", "point_pred", "q50"}
+    required_metrics = {"target", "scope", "model", "N", "R2", "RMSE", "MAE", "bias"}
+    if (
+        df is None
+        or metrics is None
+        or df.empty
+        or not required_predictions.issubset(df.columns)
+        or not required_metrics.issubset(metrics.columns)
+    ):
+        print("[SKIP] Fig09: authoritative RANDOM_TEST predictions or metrics not found.")
+        return
+    if (
+        len(df) != 2582
+        or set(df["role"].astype(str)) != {"RANDOM_TEST"}
+        or set(df["target"].astype(str)) != {"random_test"}
+    ):
+        print("[SKIP] Fig09: RANDOM_TEST role or frozen sample count is inconsistent.")
+        return
+
+    values = df[["true_L", "point_pred", "q50"]].apply(pd.to_numeric, errors="coerce")
+    if values.isna().any().any() or not np.isfinite(values.to_numpy()).all():
+        print("[SKIP] Fig09: non-finite sample-level predictions found.")
+        return
+
+    pooled = metrics.loc[
+        (metrics["target"].astype(str) == "random_test")
+        & (metrics["scope"].astype(str) == "pooled")
+        & (metrics["model"].astype(str).isin(["point_pred", "q50"]))
+    ].copy()
+    if len(pooled) != 2 or set(pooled["model"].astype(str)) != {"point_pred", "q50"}:
+        print("[SKIP] Fig09: pooled point_pred/q50 metrics are incomplete.")
+        return
+    for column in ["N", "R2", "RMSE", "MAE", "bias"]:
+        pooled[column] = pd.to_numeric(pooled[column], errors="coerce")
+    if pooled[["N", "R2", "RMSE", "MAE", "bias"]].isna().any().any():
+        print("[SKIP] Fig09: pooled metrics contain invalid values.")
+        return
+
+    metric_rows = {row["model"]: row for _, row in pooled.iterrows()}
+    y_true = values["true_L"].to_numpy(float)
+    for model in ["point_pred", "q50"]:
+        pred = values[model].to_numpy(float)
+        row = metric_rows[model]
+        computed = {
+            "N": len(pred),
+            "R2": metric_r2(y_true, pred),
+            "RMSE": metric_rmse(y_true, pred),
+            "MAE": metric_mae(y_true, pred),
+            "bias": float(np.mean(pred - y_true)),
+        }
+        if any(not np.isclose(computed[key], float(row[key]), rtol=1e-9, atol=1e-12) for key in computed):
+            print(f"[SKIP] Fig09: sample-level {model} values do not match frozen metrics.")
+            return
+
+    all_values = values[["true_L", "point_pred", "q50"]].to_numpy(float)
+    lower = min(0.0, float(all_values.min()))
+    upper = max(1.0, float(all_values.max()))
+    padding = 0.025 * (upper - lower)
+    limits = (lower - padding, upper + padding)
+
+    fig09_rc = {
+        "figure.dpi": 180,
+        "savefig.dpi": 600,
+        "figure.facecolor": "white",
+        "savefig.facecolor": "white",
+        "axes.facecolor": "white",
+        "font.family": "sans-serif",
+        "font.sans-serif": [
+            "Microsoft YaHei",
+            "Noto Sans CJK SC",
+            "Source Han Sans SC",
+            "SimHei",
+            "Arial Unicode MS",
+            "DejaVu Sans",
+        ],
+        "font.size": 8.8,
+        "axes.labelsize": 9.4,
+        "axes.titlesize": 9.7,
+        "xtick.labelsize": 8.2,
+        "ytick.labelsize": 8.2,
+        "axes.linewidth": 0.65,
+        "axes.unicode_minus": False,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+    panels = [
+        ("point_pred", "(a) 点预测"),
+        ("q50", r"(b) $q_{50}$ 中位数预测"),
+    ]
+    with plt.rc_context(fig09_rc):
+        fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.35))
+        for ax, (model, panel_title) in zip(axes, panels):
+            pred = values[model].to_numpy(float)
+            row = metric_rows[model]
+            ax.scatter(
+                y_true,
+                pred,
+                s=9,
+                alpha=0.28,
+                color="#557487",
+                edgecolors="none",
+                zorder=2,
+            )
+            ax.plot(
+                limits,
+                limits,
+                color="#3F4347",
+                linestyle=(0, (4, 3)),
+                linewidth=1.10,
+                zorder=3,
+            )
+            metric_text = (
+                f"N = {int(row['N'])}\n"
+                f"$R^2$ = {float(row['R2']):.4f}\n"
+                f"RMSE = {float(row['RMSE']):.4f}\n"
+                f"MAE = {float(row['MAE']):.4f}\n"
+                f"Bias = {float(row['bias']):.4f}"
+            )
+            ax.text(
+                0.045,
+                0.955,
+                metric_text,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=8.0,
+                linespacing=1.25,
+                color="#30343A",
+                bbox=dict(
+                    boxstyle="round,pad=0.32",
+                    facecolor="white",
+                    edgecolor="#D2D7DB",
+                    linewidth=0.45,
+                    alpha=0.94,
+                ),
+                zorder=4,
+            )
+            ax.set_xlim(limits)
+            ax.set_ylim(limits)
+            ax.set_aspect("equal", adjustable="box")
+            ax.set_xticks(np.linspace(0.0, 1.0, 6))
+            ax.set_yticks(np.linspace(0.0, 1.0, 6))
+            ax.set_xlabel("真实相对功率损失")
+            ax.set_ylabel("预测相对功率损失")
+            ax.set_title(panel_title, loc="left", pad=7, fontweight="medium")
+            ax.grid(True, color="#E6E9EB", linewidth=0.42, alpha=0.55)
+            ax.set_axisbelow(True)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.spines["left"].set_color("#6E7479")
+            ax.spines["bottom"].set_color("#6E7479")
+            ax.tick_params(width=0.60, length=3.0, color="#6E7479")
+        fig.subplots_adjust(left=0.085, right=0.985, bottom=0.14, top=0.91, wspace=0.24)
+        savefig(fig, "Fig09_random_test_actual_vs_predicted")
 
 def fig10_error_distribution():
     df = load_random_predictions()
@@ -1365,11 +1517,11 @@ if __name__ == "__main__":
         "--only",
         type=str.lower,
         metavar="ITEM",
-        help="Generate one supported item only (currently: fig03, table01).",
+        help="Generate one supported item only (currently: fig03, fig09, table01).",
     )
     args = parser.parse_args()
-    if args.only not in (None, "fig03", "table01"):
-        parser.error(f"unknown item '{args.only}'; supported values: fig03, table01")
+    if args.only not in (None, "fig03", "fig09", "table01"):
+        parser.error(f"unknown item '{args.only}'; supported values: fig03, fig09, table01")
 
     print("Paper1 full figure/table generation (v2)")
     print(f"Repository root: {ROOT}")
@@ -1377,6 +1529,8 @@ if __name__ == "__main__":
     print("This is report-only. No training, no recalibration, no formal-result overwrite.\n")
     if args.only == "fig03":
         fig03_data_split()
+    elif args.only == "fig09":
+        fig09_random_scatter()
     elif args.only == "table01":
         table01()
     else:
