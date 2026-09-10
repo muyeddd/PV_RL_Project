@@ -42,7 +42,7 @@ MODES = ("True-State", "Point", "UA")
 ATOL = 1e-12
 RTOL = 0.0
 EXPECTED_VERSIONS = {"Python": "3.11.15", "gymnasium": "1.2.3", "stable_baselines3": "2.7.1",
-                     "torch": "2.10.0+cu130", "numpy": "2.4.4", "pandas": "3.0.2"}
+                     "torch": "2.10.0+cu130", "numpy": "2.3.5", "pandas": "2.3.3"}
 INFO_KEYS = {"date", "day_index", "observation_mode", "action_name", "terminated_reason",
              "terminal_observation_sentinel", "episode_return", "clean_count"}
 PHYSICS_COLUMNS = ["L_pre", "action", "L_post", "E_clean_GHI", "soiling_cost", "cleaning_cost",
