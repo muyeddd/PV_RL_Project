@@ -27,6 +27,11 @@ PROVENANCE_CORRECTION = (
     "transcription error after independent hashlib + frozen hash-index + certutil "
     "verification; frozen source artifact was not modified."
 )
+ANNUAL_REGRESSION_TOLERANCE_NOTE = (
+    "E1 annual reward regression uses atol=1e-12, rtol=0 after an independent diagnostic "
+    "confirmed exact daily trajectory and exact CRN identity. The observed exact-equality "
+    "discrepancy was 2.842170943040401e-14 and arose from floating-point annual accumulation order."
+)
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "outputs/paper2_uncertainty_rl_v1"
 OUTPUT = BASE / "p2_2a_2_heldout_nonrl_baseline_evaluation_v1"
@@ -325,8 +330,8 @@ def run_episode(core, assets, action_rule, policy, year, root, tid, regression):
             require(metrics["N_clean"] == int(frozen["N_clean"]), "D2B cleaning exact incl PERIODIC_14")
             if policy != "PERIODIC_14":
                 e1 = regression[2][key]
-                require(after["episode_return"] == float(e1["annual_reward"])
-                        and all(metrics[n] == e1[n] for n in ("indices_sha256", "full_bank_sha256")), "E1 exact annual/CRN regression")
+                require(close(after["episode_return"], float(e1["annual_reward"]))
+                        and all(metrics[n] == e1[n] for n in ("indices_sha256", "full_bank_sha256")), "E1 annual reward tolerance / exact CRN regression")
         return metrics, rows
     finally:
         env.close()
@@ -467,9 +472,11 @@ def main():
     parser.add_argument("--mode", required=True, choices=("smoke", "formal"))
     mode = parser.parse_args().mode
     audit = {"stage": STAGE, "provenance_correction": PROVENANCE_CORRECTION, "stage_pass": False, "gates": {f"G{i}": False for i in GATES}, "gate_details": {}}
+    audit["annual_regression_tolerance_note"] = ANNUAL_REGRESSION_TOLERANCE_NOTE
     sources = {}
     protocol = {"stage": STAGE, "title": TITLE, "mode": mode, "required_gates": GATES,
                 "provenance_correction": PROVENANCE_CORRECTION,
+                "annual_regression_tolerance_note": ANNUAL_REGRESSION_TOLERANCE_NOTE,
                 "scientific_status": SMOKE_STATUS if mode == "smoke" else FORMAL_STATUS, "declaration": DECLARATION,
                 "observation_mode": "True-State", "observation": "[L_true, sin_DOY, cos_DOY]",
                 "policy_state_precision": "Frozen D2B float64 current L_pre via private audit accessor; no future/CRN inputs to action",
