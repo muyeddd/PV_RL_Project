@@ -1,0 +1,4 @@
+# Supplemental runtime dependency pin for Paper2 masked-PPO stages.
+# Keep aligned with the repository's frozen Stable-Baselines3 2.7.1 protocol.
+stable-baselines3==2.7.1
+sb3-contrib==2.7.1
